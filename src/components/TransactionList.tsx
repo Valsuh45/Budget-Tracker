@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trash2, TrendingUp, TrendingDown, Search, Filter } from "lucide-react";
-import { Transaction } from "@/types/transaction";
+import { Transaction, CURRENCIES } from "@/types/transaction";
 import { formatCurrency } from "@/lib/utils";
 
 interface TransactionListProps {
@@ -18,10 +17,14 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterCurrency, setFilterCurrency] = useState('all');
   const [sortBy, setSortBy] = useState('date');
 
   // Get unique categories
   const uniqueCategories = [...new Set(transactions.map(t => t.category))];
+  
+  // Get unique currencies
+  const uniqueCurrencies = [...new Set(transactions.map(t => t.currency || 'USD'))];
 
   // Filter and sort transactions
   const filteredTransactions = transactions
@@ -30,8 +33,9 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
                            transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || transaction.type === filterType;
       const matchesCategory = filterCategory === 'all' || transaction.category === filterCategory;
+      const matchesCurrency = filterCurrency === 'all' || (transaction.currency || 'USD') === filterCurrency;
       
-      return matchesSearch && matchesType && matchesCategory;
+      return matchesSearch && matchesType && matchesCategory && matchesCurrency;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -68,7 +72,7 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
           />
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Type" />
@@ -93,6 +97,22 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
               ))}
             </SelectContent>
           </Select>
+          
+          {uniqueCurrencies.length > 1 && (
+            <Select value={filterCurrency} onValueChange={setFilterCurrency}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Currencies</SelectItem>
+                {uniqueCurrencies.map(currency => (
+                  <SelectItem key={currency} value={currency}>
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-32">
@@ -146,6 +166,11 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
                         >
                           {transaction.type}
                         </Badge>
+                        {uniqueCurrencies.length > 1 && (
+                          <Badge variant="outline" className="text-xs">
+                            {transaction.currency || 'USD'}
+                          </Badge>
+                        )}
                       </div>
                       {transaction.description && (
                         <p className="text-sm text-slate-600">{transaction.description}</p>
@@ -159,7 +184,7 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
                       transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'
                     }`}>
                       <p className="font-semibold text-lg">
-                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency || 'USD')}
                       </p>
                     </div>
                     
