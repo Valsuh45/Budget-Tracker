@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { X } from "lucide-react";
 import { Transaction } from "@/types/transaction";
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types/transaction";
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CURRENCIES } from "@/types/transaction";
 
 interface AddTransactionFormProps {
   onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void;
@@ -21,7 +20,8 @@ export const AddTransactionForm = ({ onAddTransaction, onClose }: AddTransaction
     amount: '',
     category: '',
     date: new Date().toISOString().split('T')[0],
-    description: ''
+    description: '',
+    currency: 'USD'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,7 +36,8 @@ export const AddTransactionForm = ({ onAddTransaction, onClose }: AddTransaction
       amount: parseFloat(formData.amount),
       category: formData.category,
       date: formData.date,
-      description: formData.description
+      description: formData.description,
+      currency: formData.currency
     });
 
     // Reset form
@@ -45,7 +46,8 @@ export const AddTransactionForm = ({ onAddTransaction, onClose }: AddTransaction
       amount: '',
       category: '',
       date: new Date().toISOString().split('T')[0],
-      description: ''
+      description: '',
+      currency: 'USD'
     });
   };
 
@@ -86,18 +88,39 @@ export const AddTransactionForm = ({ onAddTransaction, onClose }: AddTransaction
               </Select>
             </div>
 
-            {/* Amount */}
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.amount}
-                onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                required
-              />
+            {/* Amount and Currency */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Amount</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.amount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency</Label>
+                <Select 
+                  value={formData.currency} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map(currency => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.symbol} {currency.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Category */}
