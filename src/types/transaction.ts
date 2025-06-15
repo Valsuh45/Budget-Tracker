@@ -1,4 +1,3 @@
-
 export interface Transaction {
   id: string;
   type: 'income' | 'expense';
@@ -6,6 +5,7 @@ export interface Transaction {
   category: string;
   date: string;
   description: string;
+  currency: string;
 }
 
 export const INCOME_CATEGORIES = [
@@ -27,4 +27,13 @@ export const EXPENSE_CATEGORIES = [
   'Education',
   'Travel',
   'Other Expense'
+];
+
+export const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
+  { code: 'XAF', symbol: 'FCFA', name: 'Central African CFA Franc' }
 ];
