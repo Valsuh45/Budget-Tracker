@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -7,9 +6,10 @@ interface DashboardStatsProps {
   totalIncome: number;
   totalExpenses: number;
   totalSavings: number;
+  currency: string;
 }
 
-export const DashboardStats = ({ totalIncome, totalExpenses, totalSavings }: DashboardStatsProps) => {
+export const DashboardStats = ({ totalIncome, totalExpenses, totalSavings, currency }: DashboardStatsProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {/* Total Income */}
@@ -18,7 +18,7 @@ export const DashboardStats = ({ totalIncome, totalExpenses, totalSavings }: Das
           <div className="flex items-center justify-between">
             <div>
               <p className="text-emerald-100 text-sm font-medium">Total Income</p>
-              <p className="text-3xl font-bold">{formatCurrency(totalIncome)}</p>
+              <p className="text-3xl font-bold">{formatCurrency(totalIncome, currency)}</p>
             </div>
             <div className="p-3 bg-white/20 rounded-full">
               <TrendingUp className="h-6 w-6" />
@@ -33,7 +33,7 @@ export const DashboardStats = ({ totalIncome, totalExpenses, totalSavings }: Das
           <div className="flex items-center justify-between">
             <div>
               <p className="text-red-100 text-sm font-medium">Total Expenses</p>
-              <p className="text-3xl font-bold">{formatCurrency(totalExpenses)}</p>
+              <p className="text-3xl font-bold">{formatCurrency(totalExpenses, currency)}</p>
             </div>
             <div className="p-3 bg-white/20 rounded-full">
               <TrendingDown className="h-6 w-6" />
@@ -56,7 +56,7 @@ export const DashboardStats = ({ totalIncome, totalExpenses, totalSavings }: Das
               }`}>
                 {totalSavings >= 0 ? 'Total Savings' : 'Budget Deficit'}
               </p>
-              <p className="text-3xl font-bold">{formatCurrency(Math.abs(totalSavings))}</p>
+              <p className="text-3xl font-bold">{formatCurrency(Math.abs(totalSavings), currency)}</p>
             </div>
             <div className="p-3 bg-white/20 rounded-full">
               <PiggyBank className="h-6 w-6" />
