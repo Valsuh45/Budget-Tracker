@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trash2, TrendingUp, TrendingDown, Search, Filter } from "lucide-react";
-import { Transaction } from "@/types/transaction";
+import { Transaction, CURRENCIES } from "@/types/transaction";
 import { formatCurrency } from "@/lib/utils";
 
 interface TransactionListProps {
@@ -17,10 +17,14 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterCurrency, setFilterCurrency] = useState('all');
   const [sortBy, setSortBy] = useState('date');
 
   // Get unique categories
   const uniqueCategories = [...new Set(transactions.map(t => t.category))];
+  
+  // Get unique currencies
+  const uniqueCurrencies = [...new Set(transactions.map(t => t.currency || 'USD'))];
 
   // Filter and sort transactions
   const filteredTransactions = transactions
@@ -29,8 +33,9 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
                            transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || transaction.type === filterType;
       const matchesCategory = filterCategory === 'all' || transaction.category === filterCategory;
+      const matchesCurrency = filterCurrency === 'all' || (transaction.currency || 'USD') === filterCurrency;
       
-      return matchesSearch && matchesType && matchesCategory;
+      return matchesSearch && matchesType && matchesCategory && matchesCurrency;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -67,7 +72,7 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
           />
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-32 dark:bg-slate-700/50 dark:border-slate-600">
               <SelectValue placeholder="Type" />
@@ -92,6 +97,22 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
               ))}
             </SelectContent>
           </Select>
+          
+          {uniqueCurrencies.length > 1 && (
+            <Select value={filterCurrency} onValueChange={setFilterCurrency}>
+              <SelectTrigger className="w-32 dark:bg-slate-700/50 dark:border-slate-600">
+                <SelectValue placeholder="Currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Currencies</SelectItem>
+                {uniqueCurrencies.map(currency => (
+                  <SelectItem key={currency} value={currency}>
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-32 dark:bg-slate-700/50 dark:border-slate-600">
@@ -116,62 +137,71 @@ export const TransactionList = ({ transactions, onDeleteTransaction }: Transacti
           </div>
         ) : (
           filteredTransactions.map(transaction => (
-            <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
-              <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-full ${
-                  transaction.type === 'income' 
-                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' 
-                    : 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400'
-                }`}>
-                  {transaction.type === 'income' ? (
-                    <TrendingUp className="h-4 w-4" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4" />
-                  )}
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium text-slate-800 dark:text-slate-100">{transaction.category}</p>
-                    <Badge 
-                      variant={transaction.type === 'income' ? 'default' : 'destructive'}
-                      className={`text-xs ${
-                        transaction.type === 'income' 
-                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70' 
-                          : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-400 dark:hover:bg-red-900/70'
-                      }`}
-                    >
-                      {transaction.type}
-                    </Badge>
+            <Card key={transaction.id} className="shadow-sm border-slate-200 hover:shadow-md transition-shadow duration-200 dark:bg-slate-700/50 dark:border-slate-600">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className={`p-2 rounded-full ${
+                      transaction.type === 'income' 
+                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' 
+                        : 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400'
+                    }`}>
+                      {transaction.type === 'income' ? (
+                        <TrendingUp className="h-4 w-4" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-slate-800 dark:text-slate-100">{transaction.category}</p>
+                        <Badge 
+                          variant={transaction.type === 'income' ? 'default' : 'destructive'}
+                          className={`text-xs ${
+                            transaction.type === 'income' 
+                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70' 
+                              : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-400 dark:hover:bg-red-900/70'
+                          }`}
+                        >
+                          {transaction.type}
+                        </Badge>
+                        {uniqueCurrencies.length > 1 && (
+                          <Badge variant="outline" className="text-xs dark:border-slate-600 dark:text-slate-300">
+                            {transaction.currency || 'USD'}
+                          </Badge>
+                        )}
+                      </div>
+                      {transaction.description && (
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{transaction.description}</p>
+                      )}
+                      <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">{formatDate(transaction.date)}</p>
+                    </div>
                   </div>
-                  {transaction.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{transaction.description}</p>
-                  )}
-                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">{formatDate(transaction.date)}</p>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className={`text-right ${
+                      transaction.type === 'income' 
+                        ? 'text-emerald-600 dark:text-emerald-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      <p className="font-semibold text-lg">
+                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency || 'USD')}
+                      </p>
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteTransaction(transaction.id)}
+                      className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:text-slate-500 dark:hover:text-red-400 dark:hover:bg-red-900/50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className={`text-right ${
-                  transaction.type === 'income' 
-                    ? 'text-emerald-600 dark:text-emerald-400' 
-                    : 'text-red-600 dark:text-red-400'
-                }`}>
-                  <p className="font-semibold text-lg">
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                  </p>
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDeleteTransaction(transaction.id)}
-                  className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:text-slate-500 dark:hover:text-red-400 dark:hover:bg-red-900/50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))
         )}
       </div>
