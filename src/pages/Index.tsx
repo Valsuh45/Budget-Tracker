@@ -16,11 +16,13 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatCurrency } from "@/lib/utils";
 import { Transaction, CURRENCIES } from "@/types/transaction";
 import { Plus, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { SpendingLineChart } from "@/components/SpendingLineChart";
 
 const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
+  const [spendingPeriod, setSpendingPeriod] = useState<'weekly' | 'monthly'>('monthly');
 
   // Load transactions from localStorage on component mount
   useEffect(() => {
@@ -141,45 +143,6 @@ const Index = () => {
           currency={defaultCurrency}
         />
 
-        {/* Currency Summary (if multiple currencies exist) */}
-        {totals.length > 1 && (
-          <div className="mt-8">
-            <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-slate-800">Multi-Currency Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {totals.map(total => (
-                    <div key={total.currency} className="p-4 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-medium">{total.currency}</h3>
-                        <Badge variant="outline">{CURRENCIES.find(c => c.code === total.currency)?.symbol || total.currency}</Badge>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-slate-600">Income:</span>
-                          <span className="font-medium text-emerald-600">{formatCurrency(total.income, total.currency)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600">Expenses:</span>
-                          <span className="font-medium text-red-600">{formatCurrency(total.expenses, total.currency)}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-slate-200">
-                          <span className="text-slate-600">Balance:</span>
-                          <span className={`font-medium ${total.savings >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                            {formatCurrency(total.savings, total.currency)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           {/* Charts Section */}
@@ -195,6 +158,38 @@ const Index = () => {
                 />
               </CardContent>
             </Card>
+
+            {/* Spending Trend Line Chart */}
+            <div className="mt-8">
+              <Card className="shadow-lg border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-slate-800 dark:text-slate-100">Spending Trend</CardTitle>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={spendingPeriod === 'weekly' ? 'default' : 'outline'}
+                      onClick={() => setSpendingPeriod('weekly')}
+                      size="sm"
+                    >
+                      Weekly
+                    </Button>
+                    <Button
+                      variant={spendingPeriod === 'monthly' ? 'default' : 'outline'}
+                      onClick={() => setSpendingPeriod('monthly')}
+                      size="sm"
+                    >
+                      Monthly
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <SpendingLineChart
+                    transactions={transactions}
+                    period={spendingPeriod}
+                    currency={defaultCurrency}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Recent Transactions */}
@@ -237,6 +232,45 @@ const Index = () => {
             </Card>
           </div>
         </div>
+
+        {/* Currency Summary (if multiple currencies exist) */}
+        {totals.length > 1 && (
+          <div className="mt-8">
+            <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-slate-800">Multi-Currency Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {totals.map(total => (
+                    <div key={total.currency} className="p-4 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium">{total.currency}</h3>
+                        <Badge variant="outline">{CURRENCIES.find(c => c.code === total.currency)?.symbol || total.currency}</Badge>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Income:</span>
+                          <span className="font-medium text-emerald-600">{formatCurrency(total.income, total.currency)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Expenses:</span>
+                          <span className="font-medium text-red-600">{formatCurrency(total.expenses, total.currency)}</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-slate-200">
+                          <span className="text-slate-600">Balance:</span>
+                          <span className={`font-medium ${total.savings >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                            {formatCurrency(total.savings, total.currency)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Detailed Transactions */}
         <div className="mt-8">
