@@ -15,15 +15,19 @@ import { Transaction } from "@/types/transaction";
 import { formatCurrency } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { ChartExportButton } from "./ChartExportButton";
 
 interface TransactionChartProps {
   transactions: Transaction[];
   defaultCurrency: string;
+  forceRenderAll?: boolean;
 }
 
-export const TransactionChart = ({ transactions, defaultCurrency }: TransactionChartProps) => {
+export const TransactionChart = ({ transactions, defaultCurrency, forceRenderAll = false }: TransactionChartProps) => {
   const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
+  const pieChartRef = useRef<HTMLDivElement>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
   
   // Get unique currencies from transactions
   const currencies = [...new Set(transactions.map(t => t.currency || 'USD'))];
@@ -132,6 +136,114 @@ export const TransactionChart = ({ transactions, defaultCurrency }: TransactionC
     );
   }
 
+  // If forceRenderAll is true, render both charts for export
+  if (forceRenderAll) {
+    return (
+      <div className="space-y-8" style={{ width: '100%', minHeight: '800px' }}>
+        {/* Expense Breakdown Chart */}
+        <div style={{ width: '100%', height: '500px' }}>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Expense Breakdown</h3>
+          {pieData.length > 0 ? (
+            <div 
+              ref={pieChartRef} 
+              data-chart="expense-breakdown" 
+              className="h-64"
+              style={{ 
+                width: '100%', 
+                height: '450px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '60px',
+                position: 'relative'
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={50}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                    labelLine={{ stroke: '#666', strokeWidth: 1 }}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomPieTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-slate-500">
+              <p>No expense data available for {selectedCurrency}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Monthly Trends Chart */}
+        <div style={{ width: '100%', height: '400px' }}>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Monthly Trends</h3>
+          {barData.length > 0 ? (
+            <div 
+              ref={barChartRef} 
+              data-chart="monthly-trends" 
+              className="h-64"
+              style={{ 
+                width: '100%', 
+                height: '300px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '20px'
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
+                  <YAxis
+                    stroke="#64748b"
+                    fontSize={12}
+                    tickFormatter={(value) => `${value}`}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar
+                    dataKey="income"
+                    fill="#10b981"
+                    name="Income"
+                    radius={[2, 2, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="expense"
+                    fill="#ef4444"
+                    name="Expenses"
+                    radius={[2, 2, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-slate-500">
+              <p>No trend data available for {selectedCurrency}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Normal render with tabs
   return (
     <div>
       {currencies.length > 1 && (
@@ -156,8 +268,17 @@ export const TransactionChart = ({ transactions, defaultCurrency }: TransactionC
         </TabsList>
 
         <TabsContent value="expenses" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Expense Breakdown</h3>
+            <ChartExportButton
+              chartRef={pieChartRef}
+              title="Expense Breakdown"
+              subtitle={`${selectedCurrency} - ${new Date().toLocaleDateString()}`}
+              filename={`expense-breakdown-${selectedCurrency}`}
+            />
+          </div>
           {pieData.length > 0 ? (
-            <div className="h-64">
+            <div ref={pieChartRef} data-chart="expense-breakdown" className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -170,6 +291,7 @@ export const TransactionChart = ({ transactions, defaultCurrency }: TransactionC
                     label={({ name, percent }) =>
                       `${name} ${(percent * 100).toFixed(0)}%`
                     }
+                    labelLine={true}
                   >
                     {pieData.map((entry, index) => (
                       <Cell
@@ -190,8 +312,17 @@ export const TransactionChart = ({ transactions, defaultCurrency }: TransactionC
         </TabsContent>
 
         <TabsContent value="trends" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Monthly Trends</h3>
+            <ChartExportButton
+              chartRef={barChartRef}
+              title="Monthly Trends"
+              subtitle={`${selectedCurrency} - ${new Date().toLocaleDateString()}`}
+              filename={`monthly-trends-${selectedCurrency}`}
+            />
+          </div>
           {barData.length > 0 ? (
-            <div className="h-64">
+            <div ref={barChartRef} data-chart="monthly-trends" className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
