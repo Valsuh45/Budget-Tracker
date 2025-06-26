@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,15 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatCurrency } from "@/lib/utils";
 import { Transaction, CURRENCIES } from "@/types/transaction";
-import { Plus, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Download, Loader2 } from "lucide-react";
+import { ChartExporter } from "@/lib/chartExport";
 
 const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
+  const [isExportingAll, setIsExportingAll] = useState(false);
+  const transactionChartRef = useRef<HTMLDivElement>(null);
 
   // Load transactions from localStorage on component mount
   useEffect(() => {
@@ -92,6 +95,132 @@ const Index = () => {
     savings: 0 
   };
 
+  const handleExportAllCharts = async () => {
+    setIsExportingAll(true);
+
+    try {
+      // Create a visible temporary container for export
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.top = '0';
+      tempContainer.style.left = '0';
+      tempContainer.style.width = '100vw';
+      tempContainer.style.height = '100vh';
+      tempContainer.style.backgroundColor = '#ffffff';
+      tempContainer.style.zIndex = '9999';
+      tempContainer.style.overflow = 'auto';
+      tempContainer.style.padding = '80px';
+      document.body.appendChild(tempContainer);
+
+      // Add loading message
+      const loadingDiv = document.createElement('div');
+      loadingDiv.style.position = 'fixed';
+      loadingDiv.style.top = '50%';
+      loadingDiv.style.left = '50%';
+      loadingDiv.style.transform = 'translate(-50%, -50%)';
+      loadingDiv.style.zIndex = '10000';
+      loadingDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+      loadingDiv.style.color = 'white';
+      loadingDiv.style.padding = '20px';
+      loadingDiv.style.borderRadius = '8px';
+      loadingDiv.style.fontSize = '16px';
+      loadingDiv.textContent = 'Preparing charts for export...';
+      document.body.appendChild(loadingDiv);
+
+      // Create a temporary React root to render the export version
+      const { createRoot } = await import('react-dom/client');
+      const tempRoot = createRoot(tempContainer);
+      
+      // Import the TransactionChart component dynamically
+      const { TransactionChart } = await import('../components/TransactionChart');
+      
+      // Render both charts for export
+      tempRoot.render(
+        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+          <h1 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '24px', fontWeight: 'bold' }}>
+            Budget Tracker Report - {defaultCurrency}
+          </h1>
+          <TransactionChart 
+            transactions={transactions} 
+            defaultCurrency={defaultCurrency}
+            forceRenderAll={true}
+          />
+        </div>
+      );
+
+      // Wait for charts to render completely - longer wait for pie charts with labels
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Update loading message
+      loadingDiv.textContent = 'Exporting charts to PDF...';
+
+      // Get the chart elements with better debugging
+      const pieChartElement = tempContainer.querySelector('[data-chart="expense-breakdown"]') as HTMLElement;
+      const barChartElement = tempContainer.querySelector('[data-chart="monthly-trends"]') as HTMLElement;
+
+      console.log('Pie chart element found:', !!pieChartElement);
+      console.log('Bar chart element found:', !!barChartElement);
+      
+      if (pieChartElement) {
+        console.log('Pie chart SVG elements:', pieChartElement.querySelectorAll('svg').length);
+        console.log('Pie chart text elements (labels):', pieChartElement.querySelectorAll('text').length);
+        console.log('Pie chart dimensions:', pieChartElement.offsetWidth, 'x', pieChartElement.offsetHeight);
+        
+        // Check for label elements specifically
+        const textElements = pieChartElement.querySelectorAll('text');
+        textElements.forEach((text, index) => {
+          console.log(`Label ${index}:`, text.textContent, 'at', text.getAttribute('x'), text.getAttribute('y'));
+        });
+      }
+      if (barChartElement) {
+        console.log('Bar chart SVG elements:', barChartElement.querySelectorAll('svg').length);
+      }
+
+      const elements = [];
+
+      // Add Expense Breakdown chart if it exists and has data
+      if (pieChartElement && pieChartElement.querySelector('svg')) {
+        console.log('Adding pie chart to export');
+        elements.push({
+          element: pieChartElement,
+          title: "Expense Breakdown",
+          subtitle: `${defaultCurrency} - ${new Date().toLocaleDateString()}`
+        });
+      } else {
+        console.warn('Pie chart not found or has no SVG');
+      }
+
+      // Add Monthly Trends chart if it exists and has data
+      if (barChartElement && barChartElement.querySelector('svg')) {
+        console.log('Adding bar chart to export');
+        elements.push({
+          element: barChartElement,
+          title: "Monthly Trends",
+          subtitle: `${defaultCurrency} - ${new Date().toLocaleDateString()}`
+        });
+      } else {
+        console.warn('Bar chart not found or has no SVG');
+      }
+
+      console.log('Total elements to export:', elements.length);
+
+      if (elements.length > 0) {
+        await ChartExporter.exportMultipleCharts(elements, `budget-tracker-report-${defaultCurrency}`);
+      } else {
+        console.warn('No charts found to export');
+      }
+
+      // Clean up
+      tempRoot.unmount();
+      document.body.removeChild(tempContainer);
+      document.body.removeChild(loadingDiv);
+    } catch (error) {
+      console.error('Export all charts error:', error);
+    } finally {
+      setIsExportingAll(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="container mx-auto px-4 py-8">
@@ -105,6 +234,20 @@ const Index = () => {
             <div className="flex flex-col items-end gap-2">
               <ThemeToggle />
               <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportAllCharts}
+                  disabled={isExportingAll || transactions.length === 0}
+                  className="dark:border-slate-600 dark:text-slate-300"
+                >
+                  {isExportingAll ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {isExportingAll ? "Exporting..." : "Export All"}
+                </Button>
                 <Select 
                   value={defaultCurrency} 
                   onValueChange={setDefaultCurrency}
@@ -184,7 +327,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           {/* Charts Section */}
           <div className="lg:col-span-2">
-            <Card className="shadow-lg border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+            <Card ref={transactionChartRef} className="shadow-lg border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-slate-800 dark:text-slate-100">Spending Overview</CardTitle>
               </CardHeader>
